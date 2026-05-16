@@ -77,6 +77,10 @@ export default function SellerBoostPage() {
   const { user } = useAuth();
   const [joinedTier, setJoinedTier] = useState<TierId | null>(null);
 
+  const isSeller = user?.role === "seller";
+  const backHref = isSeller ? "/seller" : "/";
+  const backLabel = isSeller ? "Wróć do panelu" : "Wróć do sklepu";
+
   function handleJoin(tierId: TierId) {
     if (!user) return;
     saveToWaitlist(user.email, tierId);
@@ -90,7 +94,7 @@ export default function SellerBoostPage() {
         <div className="text-center">
           <h1 className="mb-3 text-2xl font-semibold text-[#212121]">Seller Boost</h1>
           <p className="mb-6 text-[#6b6b6b]">Zaloguj się, aby zobaczyć opcje promocji swojego sklepu.</p>
-          <Link href="/account/login" className="btn-cta px-8 py-3 text-sm">
+          <Link href="/seller/login" className="btn-cta px-8 py-3 text-sm">
             Zaloguj się
           </Link>
         </div>
@@ -113,8 +117,8 @@ export default function SellerBoostPage() {
             Potwierdzenie wyślemy na:{" "}
             <span className="font-medium text-[#212121]">{user.email}</span>
           </p>
-          <Link href="/" className="btn-cta-outline px-8 py-3 text-sm">
-            Wróć do sklepu
+          <Link href={backHref} className="btn-cta-outline px-8 py-3 text-sm">
+            {backLabel}
           </Link>
         </div>
       </div>
@@ -192,6 +196,11 @@ export default function SellerBoostPage() {
         <p className="mt-8 text-center text-xs text-[#6b6b6b]">
           To jest wczesny dostęp — dołączenie do listy nie wiąże się z płatnością.
         </p>
+        <div className="mt-6 text-center">
+          <Link href={backHref} className="text-sm text-[#6b6b6b] hover:text-[#212121] transition-colors underline">
+            ← {backLabel}
+          </Link>
+        </div>
       </div>
     </div>
   );

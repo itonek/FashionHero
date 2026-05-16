@@ -3,14 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-const STORAGE_KEY = "seller_boost_modal_seen";
+const SESSION_KEY = "seller_boost_modal_seen";
 
 export function SellerBoostModal() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    const seen = localStorage.getItem(STORAGE_KEY);
+    const seen = sessionStorage.getItem(SESSION_KEY);
     if (!seen) {
       const t = setTimeout(() => setOpen(true), 600);
       return () => clearTimeout(t);
@@ -18,7 +18,7 @@ export function SellerBoostModal() {
   }, []);
 
   function dismiss() {
-    localStorage.setItem(STORAGE_KEY, "1");
+    sessionStorage.setItem(SESSION_KEY, "1");
     setOpen(false);
   }
 
