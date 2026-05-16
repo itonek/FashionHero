@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { AnnouncementBar } from "./announcement-bar";
 import { Header } from "./header";
 import { Footer } from "./footer";
@@ -9,7 +10,7 @@ import { QuickViewProvider } from "./quick-view-provider";
 import { AuthProvider } from "./auth-provider";
 import { SellerBoostPopup } from "./seller-boost-popup";
 
-function ShellInner({ children }: { children: React.ReactNode }) {
+function StoreShell({ children }: { children: React.ReactNode }) {
   const { openCart, itemCount } = useCart();
   const { wishlistItems } = useWishlist();
 
@@ -24,16 +25,29 @@ function ShellInner({ children }: { children: React.ReactNode }) {
   );
 }
 
+function ShellInner({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isSellerRoute = pathname?.startsWith("/seller");
+
+  if (isSellerRoute) {
+    return <main className="flex-1">{children}</main>;
+  }
+
+  return (
+    <CartProvider>
+      <WishlistProvider>
+        <QuickViewProvider>
+          <StoreShell>{children}</StoreShell>
+        </QuickViewProvider>
+      </WishlistProvider>
+    </CartProvider>
+  );
+}
+
 export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <CartProvider>
-        <WishlistProvider>
-          <QuickViewProvider>
-            <ShellInner>{children}</ShellInner>
-          </QuickViewProvider>
-        </WishlistProvider>
-      </CartProvider>
+      <ShellInner>{children}</ShellInner>
     </AuthProvider>
   );
 }

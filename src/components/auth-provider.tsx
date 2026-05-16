@@ -6,12 +6,14 @@ interface User {
   email: string;
   firstName: string;
   lastName: string;
+  role: "buyer" | "seller";
 }
 
 interface AuthContextValue {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (data: { email: string; password: string; firstName: string; lastName: string }) => Promise<void>;
+  loading: boolean;
+  login: (email: string, password: string, role?: "buyer" | "seller") => Promise<void>;
+  register: (data: { email: string; password: string; firstName: string; lastName: string; role?: "buyer" | "seller" }) => Promise<void>;
   logout: () => void;
 }
 
@@ -21,6 +23,7 @@ const STORAGE_KEY = "stepforward_user";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     try {
@@ -30,25 +33,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch {
       // ignore parse errors
+    } finally {
+      setLoading(false);
     }
   }, []);
 
-  const login = useCallback(async (email: string, _password: string) => {
-    // Mock login — always succeeds
+  const login = useCallback(async (email: string, _password: string, role: "buyer" | "seller" = "buyer") => {
     const newUser: User = {
       email,
       firstName: email.split("@")[0],
       lastName: "",
+      role,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
     setUser(newUser);
   }, []);
 
-  const register = useCallback(async (data: { email: string; password: string; firstName: string; lastName: string }) => {
+  const register = useCallback(async (data: { email: string; password: string; firstName: string; lastName: string; role?: "buyer" | "seller" }) => {
     const newUser: User = {
       email: data.email,
       firstName: data.firstName,
       lastName: data.lastName,
+      role: data.role ?? "buyer",
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
     setUser(newUser);
@@ -60,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
