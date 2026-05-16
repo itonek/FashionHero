@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/components/auth-provider";
 
 type TierId = "tier1" | "tier2" | "tier3";
+type Step = "tiers" | "card" | "confirmed";
 
 interface Tier {
   id: TierId;
@@ -66,8 +67,8 @@ const TIERS: Tier[] = [
   },
 ];
 
-function saveToWaitlist(email: string, tier: TierId) {
-  const key = "seller-boost-waitlist";
+function saveReservation(email: string, tier: TierId) {
+  const key = "seller-boost-reservations";
   const existing = JSON.parse(localStorage.getItem(key) ?? "[]") as unknown[];
   existing.push({ email, tier, timestamp: Date.now() });
   localStorage.setItem(key, JSON.stringify(existing));
@@ -75,7 +76,9 @@ function saveToWaitlist(email: string, tier: TierId) {
 
 export default function SellerBoostPage() {
   const { user } = useAuth();
-  const [joinedTier, setJoinedTier] = useState<TierId | null>(null);
+  const [step, setStep] = useState<Step>("tiers");
+  const [selectedTier, setSelectedTier] = useState<TierId | null>(null);
+  const [cardNumber, setCardNumber] = useState("");
 
   const isSeller = user?.role === "seller";
   const backHref = isSeller ? "/seller" : "/";
@@ -83,9 +86,21 @@ export default function SellerBoostPage() {
 
   function handleJoin(tierId: TierId) {
     if (!user) return;
-    saveToWaitlist(user.email, tierId);
-    setJoinedTier(tierId);
+    setSelectedTier(tierId);
+    setStep("card");
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handleConfirm() {
+    if (!user || !selectedTier) return;
+    saveReservation(user.email, selectedTier);
+    setStep("confirmed");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function formatCardNumber(value: string) {
+    const digits = value.replace(/\D/g, "").slice(0, 16);
+    return digits.replace(/(.{4})/g, "$1 ").trim();
   }
 
   if (!user) {
@@ -102,24 +117,102 @@ export default function SellerBoostPage() {
     );
   }
 
-  if (joinedTier) {
-    const tier = TIERS.find((t) => t.id === joinedTier)!;
+  if (step === "confirmed" && selectedTier) {
+    const tier = TIERS.find((t) => t.id === selectedTier)!;
     return (
       <div className="min-h-screen bg-[#ece9e2] flex items-center justify-center px-4">
         <div className="w-full max-w-md rounded-2xl bg-white p-10 text-center shadow-lg">
-          <div className="mb-4 text-4xl">🎉</div>
-          <h1 className="mb-2 text-2xl font-semibold text-[#212121]">Dziękujemy!</h1>
+          <div className="mb-4 text-4xl">✅</div>
+          <h1 className="mb-2 text-2xl font-semibold text-[#212121]">Rezerwacja potwierdzona</h1>
           <p className="mb-1 text-[#6b6b6b]">
-            Dodaliśmy Cię do listy oczekujących dla pakietu{" "}
+            Zarezerwowałeś pakiet{" "}
             <span className="font-medium text-[#212121]">{tier.name}</span>.
           </p>
+          <p className="mb-1 text-sm text-[#6b6b6b]">
+            Karta zostanie obciążona w dniu startu.
+          </p>
           <p className="mb-8 text-sm text-[#6b6b6b]">
-            Potwierdzenie wyślemy na:{" "}
+            Możesz anulować do 48h przed startem — wyślemy przypomnienie na:{" "}
             <span className="font-medium text-[#212121]">{user.email}</span>
           </p>
           <Link href={backHref} className="btn-cta-outline px-8 py-3 text-sm">
             {backLabel}
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === "card" && selectedTier) {
+    const tier = TIERS.find((t) => t.id === selectedTier)!;
+    const isCardValid = cardNumber.replace(/\s/g, "").length === 16;
+    return (
+      <div className="min-h-screen bg-[#ece9e2] flex items-center justify-center px-4">
+        <div className="w-full max-w-md rounded-2xl bg-white p-10 shadow-lg">
+          <button
+            onClick={() => setStep("tiers")}
+            className="mb-6 text-sm text-[#6b6b6b] hover:text-[#212121] transition-colors"
+          >
+            ← Wróć do pakietów
+          </button>
+          <h1 className="mb-1 text-2xl font-semibold text-[#212121]">Rezerwujesz miejsce</h1>
+          <p className="mb-6 text-sm text-[#6b6b6b]">
+            Pakiet: <span className="font-medium text-[#212121]">{tier.name}</span> — {tier.price} {tier.priceNote}
+          </p>
+
+          <div className="mb-5 rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800">
+            Karta zostanie obciążona w dniu startu. Możesz anulować do 48h wcześniej — bez opłat.
+          </div>
+
+          <div className="mb-4">
+            <label className="mb-1.5 block text-[12px] font-medium uppercase tracking-wider text-[#6b6b6b]">
+              Numer karty
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="1234 5678 9012 3456"
+              value={cardNumber}
+              onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
+              className="w-full rounded-xl border border-[#d4d4d4] bg-[#fafafa] px-4 py-3 text-[15px] text-[#212121] placeholder-[#b0b0b0] focus:border-[#212121] focus:outline-none transition-colors"
+            />
+          </div>
+
+          <div className="mb-8 grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1.5 block text-[12px] font-medium uppercase tracking-wider text-[#6b6b6b]">
+                Ważna do
+              </label>
+              <input
+                type="text"
+                placeholder="MM / RR"
+                maxLength={7}
+                className="w-full rounded-xl border border-[#d4d4d4] bg-[#fafafa] px-4 py-3 text-[15px] text-[#212121] placeholder-[#b0b0b0] focus:border-[#212121] focus:outline-none transition-colors"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-[12px] font-medium uppercase tracking-wider text-[#6b6b6b]">
+                CVV
+              </label>
+              <input
+                type="text"
+                placeholder="•••"
+                maxLength={3}
+                className="w-full rounded-xl border border-[#d4d4d4] bg-[#fafafa] px-4 py-3 text-[15px] text-[#212121] placeholder-[#b0b0b0] focus:border-[#212121] focus:outline-none transition-colors"
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={handleConfirm}
+            disabled={!isCardValid}
+            className="btn-cta w-full py-3.5 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Potwierdź rezerwację
+          </button>
+          <p className="mt-3 text-center text-[11px] text-[#b0b0b0]">
+            Dane karty są szyfrowane. Żadna opłata nie zostanie pobrana teraz.
+          </p>
         </div>
       </div>
     );
@@ -194,7 +287,7 @@ export default function SellerBoostPage() {
         </div>
 
         <p className="mt-8 text-center text-xs text-[#6b6b6b]">
-          To jest wczesny dostęp — dołączenie do listy nie wiąże się z płatnością.
+          Rezerwacja miejsca wymaga podania karty. Opłata pobierana w dniu startu. Anuluj do 48h wcześniej bez kosztów.
         </p>
         <div className="mt-6 text-center">
           <Link href={backHref} className="text-sm text-[#6b6b6b] hover:text-[#212121] transition-colors underline">
